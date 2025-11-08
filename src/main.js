@@ -7,10 +7,17 @@ import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import { attachUser } from './middleware/attachUser.js';
 import aiRoutes from './routes/ai.js';
+import cors from "cors";
 
 const app = express();
 app.use(helmet());
 app.use(express.json({ limit: '200kb' }));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 // Auth0 middleware: mounts /login, /logout, /callback etc
 authMiddleware(app);

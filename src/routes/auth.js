@@ -31,11 +31,14 @@ router.get('/logout', (req, res) => {
  * Optional: a protected "me" route that returns DB user
  * Frontend can call this to confirm user is logged in and to get stored user info
  */
-router.get('/me', (req, res) => {
-  if (req.user) {
-    return res.json({ ok: true, user: req.user });
+router.get("/api/user", (req, res) => {
+  if (!req.oidc.isAuthenticated()) {
+    return res.status(401).json({ authenticated: false });
   }
-  return res.status(401).json({ ok: false, error: 'Not authenticated' });
+  res.json({
+    authenticated: true,
+    user: req.oidc.user,
+  });
 });
 
 export default router;

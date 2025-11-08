@@ -9,9 +9,13 @@
     "dev": "nodemon src/main.js"
   },
   "dependencies": {
+    "@google/genai": "^1.29.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-openid-connect": "^2.19.2",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
     "mongoose": "^8.19.3"
   },
   "devDependencies": {

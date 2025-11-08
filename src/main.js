@@ -22,6 +22,8 @@ connectDB().catch(err => {
   process.exit(1);
 });
 
+import compileRoutes from "./routes/compiler.js"
+
 const app = express();
 
 // --- Core Middleware ---
@@ -56,6 +58,10 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session()); // Allows Passport to use the express-session
 
+// CORS
+// app.use(cors());
+
+app.use("/compiler", compileRoutes);
 // --- Routes ---
 app.use('/auth', authRoutes); // All Google login/logout routes
 app.use('/api/ai', ensureAuth, aiRoutes); // Protect your AI routes

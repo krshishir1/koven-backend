@@ -1,11 +1,8 @@
-export function requireAuth(req, res, next) {
-  try {
-    const isAuth = req.oidc && req.oidc.isAuthenticated && req.oidc.isAuthenticated();
-    if (isAuth) return next();
-
-    return res.status(401).json({ error: 'Authentication required', loginUrl: '/auth/login' });
-  } catch (err) {
-    console.error('requireAuth error checking auth', err);
-    return res.status(500).json({ error: 'internal' });
+export function ensureAuth(req, res, next) {
+  if (req.isAuthenticated()) {
+    // req.isAuthenticated() is a Passport function
+    return next();
+  } else {
+    res.status(401).json({ ok: false, error: 'Not authenticated' });
   }
 }

@@ -1,44 +1,49 @@
 import express from 'express';
+import passport from 'passport';
+
 const router = express.Router();
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-/**
- * Sign-in route
- * This redirects to the Auth0 /login route mounted by express-openid-connect
- */
-router.get('/login', (req, res) => {
-  // Option A: redirect to middleware-provided login endpoint
-  return res.redirect('/login');
-});
+// @desc    Auth with Google
+// @route   GET /auth/google
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'] // What info you want from Google
+}));
 
-/**
- * Sign-up route
- * Auth0 supports screen_hint=signup; redirect to the middleware login route with the query param
- */
-router.get('/signup', (req, res) => {
-  return res.redirect('/login?screen_hint=signup');
-});
-
-/**
- * Logout route
- * Redirect to the middleware-provided logout endpoint.
- * Optionally pass returnTo param to redirect back to your app after logout.
- */
-router.get('/logout', (req, res) => {
-  return res.redirect('/logout');
-});
-
-/**
- * Optional: a protected "me" route that returns DB user
- * Frontend can call this to confirm user is logged in and to get stored user info
- */
-router.get("/api/user", (req, res) => {
-  if (!req.oidc.isAuthenticated()) {
-    return res.status(401).json({ authenticated: false });
+// @desc    Google auth callback
+// @route   GET /auth/google/callback
+router.get(
+  '/google/callback',
+  passport.authenticate('google', {
+    failureRedirect: `${FRONTEND_URL}/login`, // Redirect to frontend login on fail
+  }),
+  (req, res) => {
+    // Successful authentication, redirect to frontend app.
+    // The session cookie is now set.
+    res.redirect(`${FRONTEND_URL}/app`); // Your main app page
   }
-  res.json({
-    authenticated: true,
-    user: req.oidc.user,
+);
+
+// @desc    Logout user
+// @route   GET /auth/logout
+router.get('/logout', (req, res, next) => {
+  req.logout((err) => {
+    if (err) { return next(err); }
+    req.session.destroy(() => {
+      res.clearCookie('connect.sid'); // Clear the session cookie
+      res.redirect(FRONTEND_URL); // Redirect to frontend home
+    });
   });
+});
+
+// @desc    Get current logged-in user (for frontend to check auth state)
+// @route   GET /auth/me
+router.get('/me', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ ok: true, user: req.user });
+  } else {
+    res.status(401).json({ ok: false, error: 'Not authenticated' });
+  }
 });
 
 export default router;

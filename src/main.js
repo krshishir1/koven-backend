@@ -1,6 +1,8 @@
 import express from "express"
-import cors from "cors"
+// import cors from "cors"
 // const rateLimit = require('express-rate-limit');
+
+import compileRoutes from "./routes/compiler.js"
 
 const app = express();
 
@@ -15,7 +17,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // CORS
-app.use(cors());
+// app.use(cors());
+
+app.use("/compiler", compileRoutes);
 
 app.get("/",  (req, res) => {
     return res.json({

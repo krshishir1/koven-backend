@@ -5,10 +5,14 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
   try {
-    const { artifactId, deployedContracts } = req.body;
+    const { artifactId, fileName, deployedContracts } = req.body;
 
     if (!artifactId) {
       return res.status(400).json({ error: "Artifact ID is required" });
+    }
+
+    if (!fileName || typeof fileName !== "string") {
+      return res.status(400).json({ error: "fileName is required" });
     }
 
     if (!Array.isArray(deployedContracts) || deployedContracts.length === 0) {
@@ -23,26 +27,28 @@ router.post("/", async (req, res) => {
       return res.status(404).json({ error: "Artifact not found" });
     }
 
-    // Update deployedContracts only for Solidity files
-    let updatedCount = 0;
-    artifact.files.forEach((file) => {
-      if (file.isSolidity) {
-        file.deployedContracts = deployedContracts.map((dc) => ({
-          address: dc.address,
-          network: dc.network,
-          txHash: dc.txHash,
-          deployedAt: dc.deployedAt || new Date(),
-        }));
-        updatedCount++;
-      }
-    });
+    const file = artifact.files.find(
+      (f) => f.isSolidity && f.path.toLowerCase().includes(fileName.toLowerCase())
+    );
+
+    if (!file) {
+      return res.status(404).json({ error: `Solidity file '${fileName}' not found in artifact` });
+    }
+
+    file.deployedContracts = deployedContracts.map((dc) => ({
+      address: dc.address,
+      network: dc.network,
+      txHash: dc.txHash,
+      deployedAt: dc.deployedAt || new Date(),
+    }));
 
     artifact.updatedAt = new Date();
     await artifact.save();
 
     return res.json({
-      message: `Updated deployed contracts for ${updatedCount} Solidity file(s).`,
-      deployedContracts,
+      message: `Deployment info updated for '${fileName}'`,
+      file: file.path,
+      deployedContracts: file.deployedContracts,
     });
   } catch (err) {
     console.error("Deploy update error:", err);

@@ -125,3 +125,21 @@ export async function getArtifact(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export async function getAllArtifacts(req, res) {
+  try {
+    const userId = req.user._id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Auth required' });
+    }
+
+    const artifacts = await Artifact.find({ ownerId: userId })
+      .select('_id title prompt createdAt updatedAt') 
+      .sort({ updatedAt: -1 }); // Newest first
+
+    return res.json({ ok: true, artifacts });
+  } catch (err) {
+    console.error('getAllArtifacts error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}

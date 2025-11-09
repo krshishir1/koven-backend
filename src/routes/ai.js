@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { ensureAuth } from '../middleware/auth.js'; // Assuming this is your middleware
-import { generate, modify, getArtifact } from '../controllers/aiController.js';
+import { generate, modify, getArtifact, getAllArtifacts } from '../controllers/aiController.js';
 
 const router = express.Router();
 
@@ -18,5 +18,6 @@ router.use(ensureAuth);
 router.post('/generate', aiLimiter, generate);
 router.post('/modify', aiLimiter, modify);
 router.get('/artifacts/:id', getArtifact); 
+router.get('/artifacts', getAllArtifacts);
 
 export default router;

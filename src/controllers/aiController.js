@@ -143,3 +143,63 @@ export async function getAllArtifacts(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export async function addFile(req, res){
+  try {
+    const { artifactId, fileName, content = "" } = req.body;
+
+    // --- Validation ---
+    if (!artifactId) {
+      return res.status(400).json({ error: "Artifact ID is required" });
+    }
+
+    if (!fileName || typeof fileName !== "string") {
+      return res.status(400).json({ error: "fileName is required (e.g. 'Token.sol')" });
+    }
+
+    // --- Fetch artifact ---
+    const artifact = await Artifact.findById(artifactId);
+    if (!artifact) {
+      return res.status(404).json({ error: "Artifact not found" });
+    }
+
+    // --- Check for duplicate file ---
+    const existingFile = artifact.files.find(
+      (f) => f.path.toLowerCase() === fileName.toLowerCase()
+    );
+    if (existingFile) {
+      return res.status(400).json({ error: "File already exists in artifact" });
+    }
+
+    // --- Determine if it's a Solidity file ---
+    const isSolidity = fileName.toLowerCase().endsWith(".sol");
+
+    // --- Create new file entry ---
+    const newFile = {
+      path: fileName,
+      content,
+      sha256: "", // Optional: You can hash content later
+      isSolidity,
+      compilation: {
+        status: "idle",
+        compiledAt: new Date(),
+        error: null,
+      },
+      deployedContracts: [],
+    };
+
+    // --- Add to artifact and save ---
+    artifact.files.push(newFile);
+    artifact.updatedAt = new Date();
+    await artifact.save();
+
+    return res.status(201).json({
+      message: `File '${fileName}' added successfully.`,
+      file: newFile,
+      totalFiles: artifact.files.length,
+    });
+  } catch (err) {
+    console.error("Add file error:", err);
+    return res.status(500).json({ error: err.message || "Internal Server Error" });
+  }
+}

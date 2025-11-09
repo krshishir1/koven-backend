@@ -34,7 +34,7 @@ export async function modify(req, res) {
     if (!artifact.ownerId.equals(user._id))
       return res.status(403).json({ error: 'Not owner' });
 
-    // Optional: include only the selected file context if provided
+    
     let focusedFileContext = '';
     if (selectedFile) {
       const targetFile = artifact.files.find(f => f.filename === selectedFile);
@@ -48,7 +48,7 @@ ${targetFile.content.slice(0, 6000)}
       }
     }
 
-    // Build summarized project context (safe trimmed preview of all files)
+    
     const fileSummary = artifact.files
       .map(
         f =>
@@ -59,7 +59,7 @@ ${targetFile.content.slice(0, 6000)}
       )
       .join('\n');
 
-    // 🔥 Composite AI prompt with improved structure and clarity
+    
     const compositePrompt = `
 You are an expert Solidity engineer and smart-contract assistant.
 The user wants to modify an existing project.
@@ -98,15 +98,15 @@ Return ONLY valid JSON structured as:
 Do not include commentary, markdown, or explanations outside the JSON.
 `;
 
-    // 🔮 Call Gemini to modify the project
+    
     const aiPayload = await generateProjectFromPrompt(compositePrompt, {
       solVersion: artifact.metadata?.solidity_version || '0.8.20'
     });
 
-    // 🧩 Upsert modified files into MongoDB artifact
+    
     const updated = await updateArtifactFiles(artifactId, aiPayload.files);
 
-    // ✅ Return updated artifact
+    
     return res.json({ ok: true, artifact: updated });
   } catch (err) {
     console.error('AI modify error', err);
@@ -135,7 +135,7 @@ export async function getAllArtifacts(req, res) {
 
     const artifacts = await Artifact.find({ ownerId: userId })
       .select('_id title prompt createdAt updatedAt') 
-      .sort({ updatedAt: -1 }); // Newest first
+      .sort({ updatedAt: -1 }); 
 
     return res.json({ ok: true, artifacts });
   } catch (err) {
@@ -148,7 +148,7 @@ export async function addFile(req, res){
   try {
     const { artifactId, fileName, content = "" } = req.body;
 
-    // --- Validation ---
+    
     if (!artifactId) {
       return res.status(400).json({ error: "Artifact ID is required" });
     }
@@ -157,13 +157,13 @@ export async function addFile(req, res){
       return res.status(400).json({ error: "fileName is required (e.g. 'Token.sol')" });
     }
 
-    // --- Fetch artifact ---
+    
     const artifact = await Artifact.findById(artifactId);
     if (!artifact) {
       return res.status(404).json({ error: "Artifact not found" });
     }
 
-    // --- Check for duplicate file ---
+    
     const existingFile = artifact.files.find(
       (f) => f.path.toLowerCase() === fileName.toLowerCase()
     );
@@ -171,14 +171,14 @@ export async function addFile(req, res){
       return res.status(400).json({ error: "File already exists in artifact" });
     }
 
-    // --- Determine if it's a Solidity file ---
+    
     const isSolidity = fileName.toLowerCase().endsWith(".sol");
 
-    // --- Create new file entry ---
+    
     const newFile = {
       path: fileName,
       content,
-      sha256: "", // Optional: You can hash content later
+      sha256: "", 
       isSolidity,
       compilation: {
         status: "idle",
@@ -188,7 +188,7 @@ export async function addFile(req, res){
       deployedContracts: [],
     };
 
-    // --- Add to artifact and save ---
+    
     artifact.files.push(newFile);
     artifact.updatedAt = new Date();
     await artifact.save();
@@ -201,5 +201,67 @@ export async function addFile(req, res){
   } catch (err) {
     console.error("Add file error:", err);
     return res.status(500).json({ error: err.message || "Internal Server Error" });
+  }
+}
+
+export async function updateFileContent(req, res){
+  try {
+    const { artifactId, fileName, content } = req.body;
+
+    
+    if (!artifactId) {
+      return res.status(400).json({ error: "Artifact ID is required" });
+    }
+    if (!fileName || typeof fileName !== "string") {
+      return res.status(400).json({ error: "fileName is required (e.g. 'Token.sol')" });
+    }
+    if (typeof content !== "string") {
+      return res.status(400).json({ error: "content must be a string" });
+    }
+
+    
+    const artifact = await Artifact.findById(artifactId);
+    if (!artifact) {
+      return res.status(404).json({ error: "Artifact not found" });
+    }
+
+    
+    const file = artifact.files.find(
+      (f) => f.path.toLowerCase() === fileName.toLowerCase()
+    );
+
+    if (!file) {
+      return res.status(404).json({ error: `File '${fileName}' not found in artifact` });
+    }
+
+    
+    const sha256 = crypto.createHash("sha256").update(content).digest("hex");
+
+    
+    file.content = content;
+    file.sha256 = sha256;
+
+    
+    if (file.isSolidity) {
+      file.compilation.status = "idle";
+      file.compilation.compiledAt = new Date();
+      file.compilation.error = null;
+    }
+
+    artifact.updatedAt = new Date();
+    await artifact.save();
+
+    res.json({
+      message: `File '${fileName}' updated successfully.`,
+      file: {
+        path: file.path,
+        sha256: file.sha256,
+        isSolidity: file.isSolidity,
+        compilation: file.compilation,
+      },
+    });
+  } catch (err) {
+    console.error("Update file error:", err);
+    res.status(500).json({ error: err.message || "Internal Server Error" });
   }
 }

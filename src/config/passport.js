@@ -7,11 +7,11 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: '/auth/google/callback', // Matches the route in auth.js
+      callbackURL: '/auth/google/callback', 
       proxy: true,
     },
     async (accessToken, refreshToken, profile, done) => {
-      // This is the "verify" callback that runs on successful Google login
+      
       const newUser = {
         googleId: profile.id,
         email: profile.emails[0].value,
@@ -22,16 +22,16 @@ passport.use(
       };
 
       try {
-        // Find user by their Google ID
+        
         let user = await User.findOne({ googleId: profile.id });
 
         if (user) {
-          // User exists, update last login and pass them to Passport
+          
           user.lastLogin = Date.now();
           await user.save();
           done(null, user);
         } else {
-          // New user, create them in the database
+          
           user = await User.create(newUser);
           done(null, user);
         }
@@ -43,12 +43,12 @@ passport.use(
   )
 );
 
-// Stores just the user's MongoDB _id in the session
+
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
-// Retrieves the full user object from the DB using the _id from the session
+
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
